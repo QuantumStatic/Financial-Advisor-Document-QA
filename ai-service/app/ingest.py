@@ -4,7 +4,7 @@ import tempfile
 
 import chromadb
 from langchain_community.document_loaders import PyPDFLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from app.config import CHROMA_HOST, CHROMA_PORT, CHROMA_COLLECTION, CHUNK_SIZE, CHUNK_OVERLAP
 from app.models import IngestRequest
