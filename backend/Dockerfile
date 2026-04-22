@@ -17,4 +17,4 @@ FROM eclipse-temurin:17-jre
 WORKDIR /app
 COPY --from=backend-build /app/target/*.jar app.jar
 ENV JAVA_OPTS=""
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar app.jar"]
