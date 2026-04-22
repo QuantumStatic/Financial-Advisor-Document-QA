@@ -3,7 +3,7 @@ import os
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "placeholder-for-testing")
 CHROMA_HOST = os.getenv("CHROMA_HOST", "localhost")
 CHROMA_PORT = int(os.getenv("CHROMA_PORT", "8001"))
-CHROMA_COLLECTION = "financial_advisor_docs"
+CHROMA_COLLECTION = "rag_docs"
 GROQ_MODEL = "llama-3.3-70b-versatile"
 MAX_ITERATIONS = 10
 CHUNK_SIZE = 1000
