@@ -3,9 +3,11 @@ backend/target/
 *.class
 
 # Python
-ai-service/__pycache__/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
 ai-service/.venv/
-ai-service/*.pyc
 
 # React
 frontend/node_modules/
@@ -17,3 +19,6 @@ frontend/dist/
 # IDE
 .idea/
 .vscode/
+
+# Claude Code
+.claude/
