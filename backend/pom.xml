@@ -9,7 +9,7 @@
         <version>3.2.5</version>
     </parent>
     <groupId>com.advisor</groupId>
-    <artifactId>financial-advisor</artifactId>
+    <artifactId>rag-backend</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <properties>
         <java.version>17</java.version>

@@ -93,7 +93,7 @@ def generate_answer(state: AgentState) -> AgentState:
         for m in state["conversation_history"][-6:]
     )
     prompt = (
-        f"You are a financial advisor assistant.\n\n"
+        f"You are a helpful assistant that answers questions based on the provided documents.\n\n"
         f"Conversation history:\n{history}\n\n"
         f"Retrieved context:\n{context}\n\n"
         f"Answer the question: {state['message']}\n"
