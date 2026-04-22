@@ -7,7 +7,7 @@ from app.logging_config import configure_logging, logger
 from app import ingest, agent
 
 configure_logging()
-app = FastAPI(title="Financial Advisor AI Service")
+app = FastAPI(title="Agentic RAG AI Service")
 
 
 @app.post("/ingest", response_model=IngestResponse)
