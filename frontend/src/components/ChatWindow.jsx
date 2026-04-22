@@ -16,9 +16,13 @@ export default function ChatWindow({ availableDocs = [] }) {
   const [expandedSources, setExpandedSources] = useState(new Set())
 
   const messagesRef = useRef(null)
+  const mountedRef = useRef(true)
+
+  useEffect(() => () => { mountedRef.current = false }, [])
 
   // Scroll to bottom helper
   const scrollToBottom = useCallback(() => {
+    if (!mountedRef.current) return
     if (messagesRef.current) {
       messagesRef.current.scrollTop = messagesRef.current.scrollHeight
     }
@@ -132,11 +136,20 @@ export default function ChatWindow({ availableDocs = [] }) {
 
       const assistantMsg = res.data
       setMessages(prev => [...prev, assistantMsg])
+      setTimeout(scrollToBottom, 50)
     } catch (err) {
       console.error('Failed to send message:', err)
+      setMessages(prev => [
+        ...prev.filter(m => m.id !== tempUserMsg.id),
+        {
+          id: 'err-' + Date.now(),
+          role: 'ASSISTANT',
+          content: 'Failed to send message. Please try again.',
+          error: true,
+        },
+      ])
     } finally {
       setSending(false)
-      setTimeout(scrollToBottom, 50)
     }
   }
 
@@ -248,6 +261,8 @@ function MessageBubble({ msg, sourcesExpanded, onToggleSources }) {
         className={
           isUser
             ? 'self-end bg-blue-600 text-white rounded-2xl rounded-br-sm px-4 py-2 max-w-[70%]'
+            : msg.error
+            ? 'self-start bg-red-100 text-red-700 rounded-2xl rounded-bl-sm px-4 py-2 max-w-[70%]'
             : 'self-start bg-gray-100 text-gray-800 rounded-2xl rounded-bl-sm px-4 py-2 max-w-[70%]'
         }
       >

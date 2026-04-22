@@ -1,7 +1,19 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 export default function DocumentSelector({ docs = [], selected, onChange }) {
   const [open, setOpen] = useState(false)
+  const wrapperRef = useRef(null)
+
+  useEffect(() => {
+    if (!open) return
+    function handleOutside(e) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [open])
 
   if (!docs.length) {
     return <span className="text-sm text-gray-400">No documents ready</span>
@@ -23,7 +35,7 @@ export default function DocumentSelector({ docs = [], selected, onChange }) {
   }
 
   return (
-    <div className="relative">
+    <div className="relative" ref={wrapperRef}>
       <button
         onClick={() => setOpen(o => !o)}
         className="text-sm border border-gray-300 rounded px-3 py-1.5 bg-white hover:bg-gray-50 flex items-center gap-1"
