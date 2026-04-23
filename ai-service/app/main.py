@@ -1,13 +1,22 @@
 import uuid
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Header
 from typing import Optional
 
 from app.models import IngestRequest, IngestResponse, ChatRequest, ChatResponse
 from app.logging_config import configure_logging, logger
 from app import ingest, agent
+from app.kafka_consumer import start_consumer
 
 configure_logging()
-app = FastAPI(title="Agentic RAG AI Service")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    start_consumer()
+    yield
+
+app = FastAPI(title="Agentic RAG AI Service", lifespan=lifespan)
 
 
 @app.post("/ingest", response_model=IngestResponse)

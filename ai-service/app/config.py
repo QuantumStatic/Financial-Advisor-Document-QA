@@ -8,3 +8,5 @@ GROQ_MODEL = "llama-3.3-70b-versatile"
 MAX_ITERATIONS = 10
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 200
+KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+UPLOADS_DIR = os.getenv("UPLOADS_DIR", "/data/uploads")
