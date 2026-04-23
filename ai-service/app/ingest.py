@@ -54,6 +54,9 @@ def ingest_document_from_path(event: dict) -> int:
     user_id = event["userId"]
     filename = event["filename"]
 
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"PDF not found on shared volume: {file_path}")
+
     loader = PyPDFLoader(file_path)
     docs = loader.load()
     splitter = RecursiveCharacterTextSplitter(
