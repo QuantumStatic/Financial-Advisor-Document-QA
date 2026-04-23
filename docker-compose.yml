@@ -8,12 +8,17 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      kafka:
+        condition: service_healthy
     env_file: .env
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${DB_NAME}
       SPRING_DATASOURCE_USERNAME: ${DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       PYTHON_SERVICE_URL: http://ai-service:8000
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    volumes:
+      - uploads_data:/data/uploads
 
   ai-service:
     build: ./ai-service
@@ -21,10 +26,15 @@ services:
       - "8000:8000"
     depends_on:
       - vectorstore
+      - kafka
     env_file: .env
     environment:
       CHROMA_HOST: vectorstore
       CHROMA_PORT: 8000
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      UPLOADS_DIR: /data/uploads
+    volumes:
+      - uploads_data:/data/uploads
 
   db:
     image: postgres:15
@@ -47,6 +57,27 @@ services:
     volumes:
       - chroma_data:/chroma/chroma
 
+  kafka:
+    image: apache/kafka:3.7.0
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
+    healthcheck:
+      test: ["CMD", "/opt/kafka/bin/kafka-topics.sh", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
 volumes:
   postgres_data:
   chroma_data:
+  uploads_data:

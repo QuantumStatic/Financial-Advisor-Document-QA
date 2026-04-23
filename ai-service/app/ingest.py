@@ -47,6 +47,39 @@ def ingest_document(request: IngestRequest) -> int:
         os.unlink(tmp_path)
 
 
+def ingest_document_from_path(event: dict) -> int:
+    """Ingest a document from a file path on the shared volume (Kafka flow)."""
+    file_path = event["filePath"]
+    document_id = event["documentId"]
+    user_id = event["userId"]
+    filename = event["filename"]
+
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"PDF not found on shared volume: {file_path}")
+
+    loader = PyPDFLoader(file_path)
+    docs = loader.load()
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP
+    )
+    chunks = splitter.split_documents(docs)
+
+    collection = get_chroma_collection()
+    ids = [f"{document_id}-{i}" for i in range(len(chunks))]
+    texts = [c.page_content for c in chunks]
+    metadatas = [
+        {
+            "document_id": document_id,
+            "user_id": user_id,
+            "filename": filename,
+            "page": c.metadata.get("page", 0),
+        }
+        for c in chunks
+    ]
+    collection.add(ids=ids, documents=texts, metadatas=metadatas)
+    return len(chunks)
+
+
 def delete_document(document_id: str):
     collection = get_chroma_collection()
     results = collection.get(where={"document_id": {"$eq": document_id}})

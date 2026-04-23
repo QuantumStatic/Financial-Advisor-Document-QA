@@ -1,10 +1,13 @@
 package com.advisor.document;
 
 import com.advisor.document.dto.DocumentDTO;
+import com.advisor.kafka.DocumentEventPublisher;
+import com.advisor.kafka.DocumentIngestEvent;
 import com.advisor.proxy.AiProxyService;
 import com.advisor.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -12,6 +15,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.UUID;
 
 @Service
@@ -22,6 +28,10 @@ public class DocumentService {
     private final DocumentRepository documentRepository;
     private final UserRepository userRepository;
     private final AiProxyService aiProxyService;
+    private final DocumentEventPublisher documentEventPublisher;
+
+    @Value("${advisor.uploads-dir}")
+    private String uploadsDir;
 
     public DocumentDTO upload(MultipartFile file, String userId, String requestId) throws IOException {
         if (!"application/pdf".equals(file.getContentType())) {
@@ -40,16 +50,34 @@ public class DocumentService {
         doc.setStatus("PROCESSING");
         doc = documentRepository.save(doc);
 
-        try {
-            aiProxyService.ingestDocument(doc.getId().toString(), userId,
-                    file.getOriginalFilename(), file.getBytes(), requestId);
-            doc.setStatus("READY");
-        } catch (Exception e) {
-            log.error("Ingestion failed for document={} requestId={}", doc.getId(), requestId, e);
-            doc.setStatus("FAILED");
+        // Save PDF to shared volume for FastAPI to pick up
+        Path uploadPath = Paths.get(uploadsDir);
+        Files.createDirectories(uploadPath);
+        Path dest = uploadPath.resolve(doc.getId() + ".pdf");
+        try (var in = file.getInputStream()) {
+            Files.copy(in, dest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
         }
-        doc = documentRepository.save(doc);
-        return DocumentDTO.from(doc);
+
+        // Publish async event — FastAPI will ingest and publish result back
+        final var savedDoc = doc;
+        final var destFinal = dest;
+        documentEventPublisher.publishIngest(new DocumentIngestEvent(
+                savedDoc.getId().toString(),
+                userId,
+                file.getOriginalFilename(),
+                destFinal.toString(),
+                requestId
+        )).whenComplete((result, ex) -> {
+            if (ex != null) {
+                log.error("Failed to publish ingest event documentId={}", savedDoc.getId(), ex);
+                try { java.nio.file.Files.deleteIfExists(destFinal); } catch (Exception ignored) {}
+                savedDoc.setStatus("FAILED");
+                documentRepository.save(savedDoc);
+            }
+        });
+        log.info("Document queued for ingestion documentId={} requestId={}", savedDoc.getId(), requestId);
+
+        return DocumentDTO.from(savedDoc);
     }
 
     public Page<DocumentDTO> listDocuments(String userId, int page, int size) {
