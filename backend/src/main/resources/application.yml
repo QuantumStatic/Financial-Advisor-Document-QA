@@ -15,10 +15,23 @@ spring:
     multipart:
       max-file-size: 25MB
       max-request-size: 26MB
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: rag-backend
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      auto-offset-reset: earliest
+      properties:
+        spring.json.trusted.packages: "com.advisor.kafka"
 
 advisor:
   jwt-secret: ${JWT_SECRET}
   python-service-url: ${PYTHON_SERVICE_URL:http://localhost:8000}
+  uploads-dir: ${UPLOADS_DIR:/data/uploads}
 
 logging:
   config: classpath:logback-spring.xml
