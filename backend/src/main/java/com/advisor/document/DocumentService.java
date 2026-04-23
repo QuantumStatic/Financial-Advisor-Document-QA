@@ -54,19 +54,30 @@ public class DocumentService {
         Path uploadPath = Paths.get(uploadsDir);
         Files.createDirectories(uploadPath);
         Path dest = uploadPath.resolve(doc.getId() + ".pdf");
-        Files.write(dest, file.getBytes());
+        try (var in = file.getInputStream()) {
+            Files.copy(in, dest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        }
 
         // Publish async event — FastAPI will ingest and publish result back
+        final var savedDoc = doc;
+        final var destFinal = dest;
         documentEventPublisher.publishIngest(new DocumentIngestEvent(
-                doc.getId().toString(),
+                savedDoc.getId().toString(),
                 userId,
                 file.getOriginalFilename(),
-                dest.toString(),
+                destFinal.toString(),
                 requestId
-        ));
-        log.info("Document queued for ingestion documentId={} requestId={}", doc.getId(), requestId);
+        )).whenComplete((result, ex) -> {
+            if (ex != null) {
+                log.error("Failed to publish ingest event documentId={}", savedDoc.getId(), ex);
+                try { java.nio.file.Files.deleteIfExists(destFinal); } catch (Exception ignored) {}
+                savedDoc.setStatus("FAILED");
+                documentRepository.save(savedDoc);
+            }
+        });
+        log.info("Document queued for ingestion documentId={} requestId={}", savedDoc.getId(), requestId);
 
-        return DocumentDTO.from(doc);
+        return DocumentDTO.from(savedDoc);
     }
 
     public Page<DocumentDTO> listDocuments(String userId, int page, int size) {

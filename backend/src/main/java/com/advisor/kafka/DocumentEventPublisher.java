@@ -12,8 +12,9 @@ public class DocumentEventPublisher {
 
     private final KafkaTemplate<String, DocumentIngestEvent> kafkaTemplate;
 
-    public void publishIngest(DocumentIngestEvent event) {
-        kafkaTemplate.send("document.ingest", event.documentId(), event);
+    public java.util.concurrent.CompletableFuture<org.springframework.kafka.support.SendResult<String, DocumentIngestEvent>> publishIngest(DocumentIngestEvent event) {
+        var future = kafkaTemplate.send("document.ingest", event.documentId(), event);
         log.info("Published ingest event documentId={} requestId={}", event.documentId(), event.requestId());
+        return future;
     }
 }
